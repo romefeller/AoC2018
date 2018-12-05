@@ -51,7 +51,7 @@ toGuardAction (Just _) = GuardAction (fromGregorian 0 0 0) 0 0 0 Shift
 main :: IO ()
 main = do 
     let r = mkRegex "\\[([0-9]{4})-([0-9]{2})-([0-9]{2}) ([0-9]{2}):([0-9]{2})\\] (falls asleep|wakes up|Guard #([0-9]+) begins shift)"
-    registers <- readFile "test"
+    registers <- readFile "test.1"
     acts <- return $ sort $ map (toGuardAction . matchRegex r . T.unpack) $ T.splitOn "\n" $ T.pack registers
     print $ show $ acts
     print $ accumAction acts
