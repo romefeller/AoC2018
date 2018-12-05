@@ -27,6 +27,6 @@ main =
     let 
         f = uncurry (*) . bimap sum sum . unzip . map (sieveScores . countLetters) . words
     in
-        readFile "input" >>= print . show . f 
+        readFile "input" >>= print . f 
     
     

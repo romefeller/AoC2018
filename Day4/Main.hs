@@ -81,8 +81,10 @@ main = do
     schedule <- return $ concat $ spiltAll [fst chosenGuard] groups
     totalSchedule <- return $ snd $ withId (zipWith (+)) schedule 
     (minute:_) <- return $ elemIndices (maximum totalSchedule) totalSchedule
-    print $ show $ totalSchedule
-    print $ show $ groups
-    print $ show $ fst chosenGuard * minute
-    
+    print $ fst chosenGuard * minute
+    scheduleP2 <- return $ spiltAll guardsIds groups
+    totalScheduleP2 <- return $ map (withId (zipWith (+))) $ scheduleP2 
+    maxSleep <- return $ maximum $ map maximum $ map snd totalScheduleP2
+    chosenGuardP2 <- return $ filter (\(i,ls) -> elem maxSleep ls) totalScheduleP2
+    print $ (fst $ head chosenGuardP2) * (head $ elemIndices maxSleep $ snd $ head chosenGuardP2)
     
