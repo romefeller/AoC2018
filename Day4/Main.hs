@@ -3,7 +3,7 @@ module Main where
 
 import Text.Regex
 import qualified Data.Text as T
-import Data.List (sort)
+import Data.List (sort, findIndices)
 import Data.Time.Calendar
 
 data Action = Sleep | Wake | Shift deriving (Eq,Show)
@@ -53,5 +53,7 @@ main = do
     let r = mkRegex "\\[([0-9]{4})-([0-9]{2})-([0-9]{2}) ([0-9]{2}):([0-9]{2})\\] (falls asleep|wakes up|Guard #([0-9]+) begins shift)"
     registers <- readFile "test.1"
     acts <- return $ sort $ map (toGuardAction . matchRegex r . T.unpack) $ T.splitOn "\n" $ T.pack registers
-    print $ show $ acts
-    print $ accumAction acts
+    shifts <- return $ findIndices (\x -> action x == Shift) acts
+    groups <- return $ map (\g -> (ident (head g),accumAction g)) $ 
+        map (\(i,j) -> map (\k -> acts !! k) [i .. j-1]) (zip shifts (tail shifts ++ [length acts]))
+    print $ show groups
