@@ -2,6 +2,7 @@ module Main where
 
 import qualified Data.HashMap as HM
 import Data.Bifunctor
+import Data.List
 
 type Scores = [(Char, Int)]
 
@@ -22,11 +23,21 @@ sieveScores = bimap occurences occurences . foldl func ([],[])
             | length ls > 0 = 1
             | otherwise = 0
 
+cmpstr :: String -> String -> Int
+cmpstr ss ts = length $ filter (\(a,b) -> a /= b) $ zip ss ts
+        
+pt2 :: [String] -> [Int]
+pt2 ww =  
+    let 
+        diffs = map (\x -> map (cmpstr x) ww) ww
+    in
+        concat $ filter (not . null) $ map (findIndices (== 1)) diffs
+
+-- filter (\w -> True == (and $ map (elem w) r)  ) ['a'..'z']
 main :: IO ()
 main = 
     let 
         f = uncurry (*) . bimap sum sum . unzip . map (sieveScores . countLetters) . words
     in
-        readFile "input" >>= print . f 
-    
-    
+        readFile "input" >>= \x -> (print $ f  x) >> return (map ((words x) !!) $ pt2 $ words x)
+            >>= \(x:y:[]) -> print $ x \\ (x \\ y)
