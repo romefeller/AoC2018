@@ -35,10 +35,8 @@ main = do
     squares <- readFile "input"
     squaresDt <- return $ 
         map (toSquare . (\(Just x) -> x) . (matchRegex r) . T.unpack) $ T.splitOn "\n" $ T.pack squares
-    ziipedCoord <- return $ zip (map left squaresDt) (map top squaresDt) 
-    lastSquare <- return $ head $ 
-        filter (\(Square i x y _ _) -> norm(x,y) == (maximum $ map norm ziipedCoord)) squaresDt
-    points <- return $ [(x,y) | x <- [0 .. left lastSquare + width lastSquare], y <- [0 .. top lastSquare + height lastSquare]]
+    (le,to,wi,he) <- return $ (maximum (map left squaresDt), maximum (map top squaresDt), maximum (map width squaresDt), maximum (map height squaresDt)) 
+    points <- return $ [(x,y) | x <- [0 .. le + wi + 1], y <- [0 .. to + he + 1]]
     p1 <- return $ take (div (length points) 2) points
     p2 <- return $ drop (1+div (length points) 2) points
     print $ par (execute squaresDt p1) (execute squaresDt p2 + execute squaresDt p1)
