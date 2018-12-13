@@ -29,7 +29,6 @@ start deps seed = unfoldr go seed
             | length s < 26 = Just (s ++ (take 1 $ n s),s ++ (take 1 $ n s))
             | otherwise = Nothing
         n s = (next deps s)
-    
 
 main :: IO ()
 main = do 
@@ -40,3 +39,4 @@ main = do
     concPaths <- return $ bimap concat concat . unzip $ paths
     allP <- return $ nub $ uncurry (++) concPaths
     print $ last $ start (allPrereqs paths 'Z')  ""   
+    print paths
