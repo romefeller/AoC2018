@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 module Plants where
 
 import Data.List (unfoldr)
@@ -29,7 +30,7 @@ instance Comonad Zipper where
 
 reduce :: Zipper Char -> Char 
 reduce z@(Zipper ls x rs) 
-    | elem w notes = '#'
+    | elem w notesInp = '#'
     | otherwise = '.'
     where 
         w = [(extract $ goLeft  $ goLeft z)] ++ [(extract $ goLeft z)] ++ [x] ++ 
@@ -42,16 +43,29 @@ initzInp :: Zipper Char
 initzInp = Zipper (repeat '.') '#' ("....##.#.#.####..#.######..##.#.########..#...##...##...##.#.#...######.###....#...##..#.#....##.##" ++ (repeat '.'))
 
 toList :: Int -> Int -> Zipper a -> [a]
-toList l r (Zipper ls x rs) = (take l ls) ++ [x] ++ (take r rs) 
+toList l r z@(Zipper ls x rs) = left l (goLeft z) ++ [x] ++ (take r rs) 
+    where 
+        left l z@(Zipper ls x _)
+            | l == 0 = []
+            | otherwise = x : left (l-1) (goLeft z) 
 
-nextGen :: Int -> [Char] -> Zipper Char 
-nextGen n xs = Zipper (repeat '.' ++ (take n xs)) (head $ drop n xs) ((drop (n+1) xs) ++ repeat '.')
-
-gens :: Int -> Int -> [Zipper Char]
-gens n m = unfoldr (\b -> Just (nextGen n $ toList n m $ extend b reduce,b)) initz
+gens :: Int -> Zipper Char -> [Zipper Char]
+gens g seed = unfoldr go (g,seed)
+    where
+        go !(g,s)
+            | g <= 0 = Nothing
+            | otherwise = Just (next,(g-1,next)) 
+            where 
+                next = goRight $ extend s reduce 
 
 calculate :: Int -> Int -> String -> Int
-calculate n m ps = sum $ map (uncurry (*)) $ map (\(a,b) -> (a,if b == '.' then 0 else 1)) $ zip [n..m] ps 
+calculate n m ps = sum $ map (uncurry (*)) $ map (\(a,b) -> (a,if b == '.' then 0 else 1)) $ zip [0-n..m] ps 
+
+exec' :: Int -> Int -> Int -> Zipper Char -> String
+exec' n m g z = toList n m $ (iterate goLeft (last $ gens g z)) !! g
+
+exec :: Int -> Int -> Int -> Zipper Char -> Int
+exec n m g z = calculate n m $ toList n m $ (iterate goLeft (last $ gens g z)) !! g
 
 notesInp =[".#.##",".#.#.","..#.#","##.#.","##...","..###",".##..","..#..",".##.#","####.", 
            "#...#","###.#","...#.",".#..#","#.##."]

@@ -112,6 +112,7 @@ runKartsCrash grid = do
 
 main :: IO ()
 main = do 
-    file <- readFile "inputNoKarts"
+    file <- readFile "input"
     grid <- return $ map T.unpack $ T.splitOn "\n" $ T.pack file :: IO [String]
-    evalStateT (runKartsCrash grid) buildKarts
+    print $ findIndices (== '>') (grid !! 142)
+    --evalStateT (runKartsCrash grid) buildKarts
