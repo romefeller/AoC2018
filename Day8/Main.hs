@@ -1,44 +1,62 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where 
 
-import Text.Regex
-import qualified Data.Text as T
-import Data.List (sort, findIndices, maximumBy, nub, elemIndices)
-import Data.Time.Calendar
-import Data.Bifunctor
+import Data.Foldable (toList)
+import Data.Sequence 
+import Prelude hiding (take,drop,null,length,filter)
+import Control.Monad.State
+
 
 data RoseTree = RoseTree {
-    header :: (Int,Int),
-    children :: [RoseTree],
-    metadata :: [Int]
+    childs ::   Int,
+    meta   :: Int,
+    children ::  Seq RoseTree,
+    metadata :: Seq Int
 } deriving Show
 
-buildRT :: [Int] -> RoseTree
-buildRT (x:y:xs) 
-    | (fst $ header $ buildRT xs) /= 0  = RoseTree (x,y) (rt:[]) m
-    | otherwise = RoseTree (x,y) (s:[RoseTree (a,b) [] n]) m
-        where 
-            (a:b:_) = take 2 xs
-            n = take y $ drop 2 xs
-            rt = buildRT next
-            s = buildRT $ drop (2+y) next
-            m = take y (reverse xs)
-            next = reverse $ drop y (reverse xs)
-buildRT _ = RoseTree (-1,-1) [] []
+getFrom :: Monad m => Int -> StateT (Seq Int) m (Seq Int)
+getFrom x = StateT $ \s -> return (take x s,drop x s)
 
-exec :: [Int] -> Int
-exec (0:y:xs) = sum (take y xs) + exec (drop y xs)
-exec (x:y:xs) = sum m + exec next
-    where 
-        m = take y (reverse xs)
-        next = reverse $ drop y (reverse xs)
-exec _ = 0
+hasNext :: Monad m => StateT (Seq Int) m Bool
+hasNext = StateT $ \s -> return (null s,s)
 
-sumRT :: RoseTree -> Int
-sumRT (RoseTree _ cs m) = sum m + sum (map sumRT cs) 
+getState :: Monad m => StateT (Seq Int) m (Seq Int)
+getState = StateT $ \s -> return (s,s)
+
+build :: Monad m => StateT (Seq Int) m RoseTree
+build = do 
+    cm <- getFrom 2
+    x <- return $ cm `index` 0
+    y <- return $ cm `index` 1
+    if (x == 0) then do
+        meta <- getFrom y
+        return $ RoseTree x y empty meta
+    else do
+        rt <- mapM (const build) [1..x]  
+        meta1 <- getFrom y
+        return $ RoseTree x y (fromList rt) meta1
+
+--- Pt 2 ---
+
+index1 xs i  
+    | i > length xs = RoseTree 0 0 empty empty
+    | otherwise = xs `index` (i-1)
+
+sumChild :: RoseTree -> Int
+sumChild rt 
+    | (length $ children rt) == 0 = sum $ metadata rt
+    | otherwise = sum $ map sumChild $ map ((children rt) `index1`) $ toList (metadata rt)
+        
+----
+
+sumRT :: RoseTree -> Int 
+sumRT rt = 
+    if null (children rt) then (sum $ metadata rt)
+    else (sum $ metadata rt) + sum (fmap sumRT (children rt)) 
 
 main :: IO ()
 main = do 
     strs <- readFile "input"
-    nums <- return $ map read (words strs) :: IO [Int]
-    print $ exec nums
+    nums <- return $ fromList $ map read (words strs) :: IO (Seq Int)
+    ev <- evalStateT build nums 
+    print $ sumChild ev
