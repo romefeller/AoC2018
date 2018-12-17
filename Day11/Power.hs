@@ -1,8 +1,11 @@
 module Power where
 
+
 import Data.HashMap (insert,Map,empty,lookup)
 import Data.List ((\\),unfoldr)
 import Prelude hiding (lookup)
+
+import qualified Data.Sequence as SQ
 
 gen33 :: (Integer, Integer) -> [(Integer, Integer)]
 gen33 (1,y) = [(a,b) | a<-[1,1+1,1+2], b<-[y,y+1,y+2]]
@@ -38,17 +41,17 @@ highest serial
 
 -- PART 2 --
 
-allPowers :: Integer -> [((Integer,Integer),Integer)]
-allPowers serial = map (\p -> (p,power serial p)) allPoints
+allPowers :: Integer -> SQ.Seq ((Integer,Integer),Integer)
+allPowers serial = fmap (\p -> (p,power serial p)) $ SQ.fromList allPoints
 
-insertPoints :: [((Integer,Integer),Integer)] -> Map (Integer,Integer) Integer
+insertPoints :: SQ.Seq ((Integer,Integer),Integer) -> Map (Integer,Integer) Integer
 insertPoints = foldl (\m (k,v) -> insert k v m) empty
 
-genx :: Integer -> (Integer, Integer) -> [(Integer, Integer)]
+genx :: Integer -> (Integer, Integer) -> SQ.Seq (Integer, Integer)
 genx s (x,y) 
     | (300-x) < s-1 || (300-y) < s-1 = 
-        interiorPts300 ++ ([(a,b) | a <-[300-(s-1) .. 300], b<-[300-(s-1) .. 300]] \\ interiorPts300)
-    | otherwise = interiorPts
+        (SQ.fromList interiorPts300) SQ.>< SQ.fromList ([(a,b) | a <-[300-(s-1) .. 300], b<-[300-(s-1) .. 300]] \\ interiorPts300)
+    | otherwise = SQ.fromList interiorPts
     where
         interiorPts300 = [(a,b) | a <-[x .. 300], b<-[y .. 300]]
         interiorPts = [(a,b) | a <-[x .. x+(s-1)], b<-[y .. y+(s-1)]]
@@ -57,8 +60,8 @@ sumPowers :: Integer -> (Integer, Integer) -> Map (Integer, Integer) Integer -> 
 sumPowers n p hm = foldl (\s pg -> s + ((\(Just x) -> x) $ lookup pg hm)) 0 (genx n p)
 
 -- writeFile "5" $  fosldl (\s e -> show e ++ "\n") "" f 
-f :: Int -> [[Integer]]
-f n = take 300 $ unfoldr (\ms -> Just $ (take 300 ms, drop 300 ms)) (map snd $ allPowers 7400) 
+--f :: Int -> [[Integer]]
+--f n = take 300 $ unfoldr (\ms -> Just $ (take 300 ms, drop 300 ms)) (map snd $ allPowers 7400) 
 
 exec :: Integer -> Integer -> (Integer, Integer) -> Integer
 exec serial n p = sumPowers n p (insertPoints $ allPowers serial)
