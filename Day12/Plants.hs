@@ -3,7 +3,7 @@ module Plants where
 
 import Data.List (unfoldr)
 
--- TRAINING COMONADS W/O Comonad module-- 
+-- TRAINNING COMONADS W/O Comonad module-- 
 class Functor w => Comonad w where 
     extract :: w a -> a 
     duplicate :: w a -> w (w a)

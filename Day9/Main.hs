@@ -1,51 +1,45 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where 
 
-import Text.Regex
-import qualified Data.Text as T
-import Data.List (sort, findIndices, maximumBy, nub, elemIndices, unfoldr, (\\))
-import Data.Time.Calendar
-import Data.Bifunctor
+import Data.Sequence
+import qualified Data.List as L
+import Data.Foldable (toList)
+import Prelude hiding (length,take,drop,replicate)
 
-insertSeq :: Int -> a -> [a] -> [a]
-insertSeq n e xs = take n xs ++ [e] ++ drop n xs
+insertAt :: Int -> a -> Seq a -> Seq a
+insertAt n e xs = take n xs >< fromList [e] >< drop n xs
 
-seq1 :: Int -> [(Int,[Int],[Int])] 
-seq1 n = unfoldr (\(i,s,h) -> Just ((i,s,h),(i+1,newS (i+1) s,(rem (i+1) s)++h))) (0,[0],[])
+deleteAt :: Int -> Seq a -> Seq a
+deleteAt n xs = take n xs >< drop (n+1) xs
+
+sconcat :: Seq (Seq a) -> Seq a 
+sconcat = foldl (><) empty
+
+listRem :: Int -> Int
+listRem n = head $ ( toList $ fst $ marbles $ n-1) L.\\ (toList $ fst $ marbles n)
+
+turns :: Int -> Int -> Seq Int
+turns h n = fromList [0] >< (sconcat $ replicate (div h n) $ fromList [1..n])
+
+scores h n = Prelude.zip3 (map (\i -> (turns h n) `index` i ) st)  st (fmap listRem st) 
     where 
-        newS :: Int -> [Int] -> [Int]
-        newS 0 (0:[]) = [0,1]
-        newS 1 (0:1:[]) = [0,2,1]
-        newS m xs 
-            | mod m 23 /= 0 =  insertSeq (ix 23 m) m xs
-            | otherwise = xs \\ [xs !! (ix 23 m)]
-        rem m xs
-            | mod m 23 == 0 = [xs !! (ix 23 m)]
-            | otherwise = []
+        st = [23*x | x <- [1..(div h 23)]]
 
-exec :: Int -> (Int,[Int],[Int])
-exec n = last $ take (n+1) $ seq1 n
+sumScores h n p = sum $ map (\(a,b,c) -> b+c) $ Prelude.filter (\(a,b,c) -> a == p) $ scores h n
 
-whichIx :: Int -> Int -> Int -> Int
-whichIx x s n 
-    | s > n = -999
-    | s == 0 && n < 248 = 0
-    | (w == ix x n) && (mod n x == 0) = -1
-    | s == n = ix x s 
-    | otherwise = go n + w
+marbles :: Int -> (Seq Int,Int)
+marbles 0 = (fromList [0],1)
+marbles 1 = (fromList [0,1],1)
+marbles 2 = (fromList [0,2,1],1)
+marbles k 
+    | mod k 23 /= 0 = (insertAt nextIx k (fst prior),nextIx)
+    | mod k 23 == 0 = (deleteAt delIx (fst prior),delIx)
     where 
-        w = whichIx x s (n-1)
-        z = if ix x n > w then 0 else 1
-        go n = if mod n x == 0 then -1 else z
-
-ix :: Int -> Int -> Int
-ix _ 0 = 0
-ix _ 1 = 1
-ix _ 2 = 1
-ix x n 
-    | mod n x /= 0 = mod (2 + (ix x $ n-1)) (n + (mod n 2) - (div n x))   
-    | otherwise = mod ((ix x $ n-1) - 7) (n - (div (n-1) x))
-
+        delIx = mod (snd prior-7) (n + (mod n 2))
+        prior = marbles (k-1)
+        nextIx = mod (snd prior + 2) (n+(mod n 2))
+        n = length $ fst prior
+        
 main :: IO ()
 main = do 
     strs <- readFile "test"
