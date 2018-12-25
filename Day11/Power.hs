@@ -1,7 +1,8 @@
+{-#LANGUAGE BangPatterns#-}
 module Power where
 
 
-import Data.HashMap (insert,Map,empty,lookup)
+import Data.HashMap (insert,Map,empty,lookup,(!),fromList)
 import Data.List ((\\),unfoldr)
 import Prelude hiding (lookup)
 
@@ -47,23 +48,23 @@ allPowers serial = fmap (\p -> (p,power serial p)) $ SQ.fromList allPoints
 insertPoints :: SQ.Seq ((Integer,Integer),Integer) -> Map (Integer,Integer) Integer
 insertPoints = foldl (\m (k,v) -> insert k v m) empty
 
-genx :: Integer -> (Integer, Integer) -> SQ.Seq (Integer, Integer)
-genx s (x,y) 
-    | (300-x) < s-1 || (300-y) < s-1 = 
-        (SQ.fromList interiorPts300) SQ.>< SQ.fromList ([(a,b) | a <-[300-(s-1) .. 300], b<-[300-(s-1) .. 300]] \\ interiorPts300)
-    | otherwise = SQ.fromList interiorPts
-    where
-        interiorPts300 = [(a,b) | a <-[x .. 300], b<-[y .. 300]]
-        interiorPts = [(a,b) | a <-[x .. x+(s-1)], b<-[y .. y+(s-1)]]
+getMap = insertPoints $ allPowers 7400
+
+summedTable = insertPoints $ fmap (accumP getMap) $ SQ.fromList allPoints
+
+accumP :: Map (Integer,Integer) Integer -> (Integer,Integer) -> ((Integer,Integer),Integer)
+accumP hs (x,y) = ((x,y),sum [hs ! (a,b) | a<-[1..x], b<-[1..y]])
+
+window :: Map (Integer,Integer) Integer -> Integer -> (Integer,Integer) -> ((Integer,Integer),Integer)
+window hs n (x,y) = ((x,y), d + a - b - c)
+    where 
+        d = hs ! (x+n-1,y+n-1)
+        a = hs ! (x,y)
+        b = hs ! (x-n+1,y)
+        c = hs ! (x,y-n+1)
         
-sumPowers :: Integer -> (Integer, Integer) -> Map (Integer, Integer) Integer -> Integer 
-sumPowers n p hm = foldl (\s pg -> s + ((\(Just x) -> x) $ lookup pg hm)) 0 (genx n p)
-
--- writeFile "5" $  fosldl (\s e -> show e ++ "\n") "" f 
---f :: Int -> [[Integer]]
---f n = take 300 $ unfoldr (\ms -> Just $ (take 300 ms, drop 300 ms)) (map snd $ allPowers 7400) 
-
-exec :: Integer -> Integer -> (Integer, Integer) -> Integer
-exec serial n p = sumPowers n p (insertPoints $ allPowers serial)
-
---  maximum $ map (exec 7400 10) allPoints
+-- 233,187,13
+maxWin n = filter (\((_,_),v) -> v == maxp) m
+        where 
+            m = map (window summedTable n) $ [(a,b)|a<-[n+1..300-n],b<-[n+1..300-n]]
+            maxp = foldl (\x (_,a)-> max x a) (snd $ head m) (tail m)
